@@ -18,23 +18,25 @@ struct sample{
 template<typename M, typename D>
 struct trainer{
   using info = typename M::info;
+  typename info::real_type learning_rate{0.0};
   M model;
   D data;
   std::vector<sample<info>> history{};
 
   template<typename T>
-  void set_lr(T&& lr){ model.set_lr(std::forward<T>(lr)); }
+  trainer<M, D>& set_lr(T&& lr){
+    learning_rate = lr;
+    return *this;
+  }
 
   void update_model(){
     typename info::latent_vec_t latent; latent.setZero();
     auto trajectory = data.get_trajectory();
-    std::cout << trajectory.X << std::endl;
     typename info::real_type t{0.0};
     for(auto&&[input, exp_out] : trajectory){
-      std::cout << input << std::endl << std::endl;
       const auto[out, next_latent] = model.forward(typename M::backward_t(input, latent));
       const auto gradient = data.gradient(exp_out, out);
-      history.push_back(sample<info>{t, input, latent, gradient});
+      history.push_back(sample<info>{t, input, gradient, latent});
       latent = next_latent;
       t += data.dt();
     }
@@ -46,6 +48,9 @@ struct trainer{
       // ignore gradient of loss w.r.t input for now.
       const auto[_, latent_grad_next] = model.backward(state_info, grad_info);
     }
+    std::cout << model.grad << std::endl;
+    model.step_grad(learning_rate);
+    model.clear_grad();
   }
 
   trainer(M m, D d) : model(m), data(d) {

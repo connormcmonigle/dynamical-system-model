@@ -19,7 +19,7 @@ struct config{
 template<typename T>
 T dX_dt(const T& X, const config::real_type& mu){
     T result{};
-    result << X(1), (mu * (1 - X(0) * X(0)) * X(1) + X(0));
+    result << X(1), (mu * (1.0 - X(0)*X(0)) * X(1) - X(0));
     return result;
 }
 
@@ -40,7 +40,7 @@ struct trajectory_iterator{
     }
 
     trajectory_iterator& operator--(){
-        X += dX_dt(X, c.mu) * c.dt;
+        X -= dX_dt(X, c.mu) * c.dt;
         --step;
         return *this;
     }
@@ -63,7 +63,7 @@ struct trajectory{
     trajectory_iterator begin() const { return trajectory_iterator(c, 0, X); }
     trajectory_iterator end() const { return trajectory_iterator(c, c.steps, X); }
 
-    trajectory(const config& c_, config::real_type x, config::real_type y) : c{c_} { X << x, y; }
+    trajectory(const config& c_, config::real_type x, config::real_type v) : c{c_} { X << x, v; }
 };
 
 struct data_generator{
@@ -72,21 +72,21 @@ struct data_generator{
     config c;
 
     std::mt19937 generator{std::random_device()()};
-    std::uniform_real_distribution<config::real_type> distribution{-10.0, 10.0};
+    std::uniform_real_distribution<config::real_type> distribution{-3.0, 3.0};
 
     config::real_type dt() const { return c.dt; }
 
     template<typename T>
-    T gradient(const T& y_true, const T& y_pred) const {
+    T gradient(const T& true_, const T& pred_) const {
         //mse gradient
-        return (2.0 * (y_pred - y_true)).eval();
+        return (2.0 * (pred_ - true_)).eval() * dt();
     }
 
 
     trajectory get_trajectory(){
         const auto x = distribution(generator);
-        const auto y = distribution(generator);
-        return trajectory(c, x, y);
+        const auto v = distribution(generator);
+        return trajectory(c, x, v);
     }
 
     data_generator(config c_) : c{c_} {}

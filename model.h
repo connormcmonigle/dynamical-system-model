@@ -7,6 +7,19 @@
 
 namespace dyn{
 
+template<typename F, typename ... Args>
+void over_weights(F&& f, Args&& ... args){
+  f((args.m_out)...);
+  f((args.b_out)...);
+
+  f((args.m_in)...);
+  f((args.b_in)...);
+
+  f((args.m_latent)...);
+  f((args.m_latent_1)...);
+  f((args.m_latent_2)...);
+}
+
 template<typename I>
 struct weights{
   using info = I;
@@ -22,15 +35,7 @@ struct weights{
 
   template<typename F>
   void over(F&& f){
-    f(m_out);
-    f(b_out);
-
-    f(m_in);
-    f(b_in);
-
-    f(m_latent);
-    f(m_latent_1);
-    f(m_latent_2);
+    return over_weights(std::forward<F>(f), *this);
   }
 
   weights(){
@@ -57,6 +62,7 @@ struct model{
   typename info::real_type dt;
 
   void set_dt(const typename info::real_type& _dt){ dt = _dt; }
+
 
   typename info::latent_vec_t _dx_dt(const backward_t& state) const {
     const auto&[env, x] = state;
@@ -113,6 +119,13 @@ struct model{
 
   void clear_grad(){
     grad.over([](auto& in){ in.setZero(); });
+  }
+
+  void step_grad(typename info::real_type learning_rate){
+    auto update_rule = [learning_rate](auto& w_, const auto& grad_){
+      w_ -= learning_rate * grad_;
+    };
+    over_weights(update_rule, w, grad);
   }
 
   model(const typename info::real_type& dt_) : dt{dt_} {}

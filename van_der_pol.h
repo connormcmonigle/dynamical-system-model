@@ -89,7 +89,7 @@ struct data_generator{
         return trajectory(c, x, y);
     }
 
-    data_generator(config c_) : c{c} {}
+    data_generator(config c_) : c{c_} {}
 
 };
 

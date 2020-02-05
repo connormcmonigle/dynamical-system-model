@@ -31,6 +31,7 @@ struct trainer{
     std::cout << trajectory.X << std::endl;
     typename info::real_type t{0.0};
     for(auto&&[input, exp_out] : trajectory){
+      std::cout << input << std::endl << std::endl;
       const auto[out, next_latent] = model.forward(typename M::backward_t(input, latent));
       const auto gradient = data.gradient(exp_out, out);
       history.push_back(sample<info>{t, input, latent, gradient});

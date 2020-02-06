@@ -46,7 +46,7 @@ struct weights{
   }
 
   static weights<I> random(){
-    const typename info::real_type init_factor = 0.001;
+    const typename info::real_type init_factor = 0.02;
     weights<I> result{};
     result.over([init_factor](auto& w){
       w.setRandom();
@@ -110,7 +110,7 @@ struct model{
 
     grad.m_out += env_grad * x.transpose() * dt;
     grad.b_out += env_grad * dt;
-    grad.m_through += env_grad * env.transpose();
+    grad.m_through += env_grad * env.transpose() * dt;
     grad.m_in += x_grad * env.transpose() * dt;
     grad.b_in += x_grad * dt;
     grad.m_latent += x_grad * x.transpose() * dt;

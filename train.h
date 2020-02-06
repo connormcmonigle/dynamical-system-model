@@ -36,6 +36,7 @@ struct trainer{
     for(auto&&[input, exp_out] : trajectory){
       const auto[out, next_latent] = model.forward(typename M::backward_t(input, latent));
       const auto gradient = data.gradient(exp_out, out);
+      std::cout << data.error(exp_out, out) << std::endl;
       history.push_back(sample<info>{t, input, gradient, latent});
       latent = next_latent;
       t += data.dt();
@@ -47,8 +48,8 @@ struct trainer{
       const auto state_info = typename M::backward_t(iter -> input, iter -> latent);
       // ignore gradient of loss w.r.t input for now.
       const auto[_, latent_grad_next] = model.backward(state_info, grad_info);
+      latent_grad = latent_grad_next;
     }
-    std::cout << model.grad << std::endl;
     model.step_grad(learning_rate);
     model.clear_grad();
   }

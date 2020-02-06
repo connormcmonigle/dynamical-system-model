@@ -18,6 +18,7 @@ struct info{
   using in_mat_t = Matrix<T, Latent, Input>;
   using out_mat_t = Matrix<T, Output, Latent>;
   using latent_mat_t = Matrix<T, Latent, Latent>;
+  using through_mat_t = Matrix<T, Output, Input>;
 };
 
 }

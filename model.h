@@ -2,6 +2,7 @@
 #include <tuple>
 #include <iostream>
 #include <utility>
+#include <string_view>
 
 #include "util.h"
 
@@ -11,6 +12,7 @@ template<typename F, typename ... Args>
 void over_weights(F&& f, Args&& ... args){
   f((args.m_out)...);
   f((args.b_out)...);
+  f((args.m_through)...);
 
   f((args.m_in)...);
   f((args.b_in)...);
@@ -25,6 +27,7 @@ struct weights{
   using info = I;
   typename info::out_mat_t m_out{};
   typename info::out_vec_t b_out{};
+  typename info::through_mat_t m_through{};
 
   typename info::in_mat_t m_in{};
   typename info::latent_vec_t b_in{};
@@ -43,11 +46,28 @@ struct weights{
   }
 
   static weights<I> random(){
+    const typename info::real_type init_factor = 0.001;
     weights<I> result{};
-    result.over([](auto& w){ w.setRandom(); });
+    result.over([init_factor](auto& w){
+      w.setRandom();
+      w *= init_factor;
+    });
     return result;
   }
 
+};
+
+struct weight_names{
+  std::string_view m_out{"m_out"};
+  std::string_view b_out{"b_out"};
+  std::string_view m_through{"m_through"};
+
+  std::string_view m_in{"m_in"};
+  std::string_view b_in{"b_in"};
+
+  std::string_view m_latent{"m_latent"};
+  std::string_view m_latent_1{"m_latent_1"};
+  std::string_view m_latent_2{"m_latent_2"};
 };
 
 template<typename I>
@@ -74,13 +94,13 @@ struct model{
 
   forward_t forward(const backward_t& state) const {
     const auto&[env, x] = state;
-    const typename info::out_vec_t out = w.m_out * x + w.b_out;
+    const typename info::out_vec_t out = w.m_through * env + w.m_out * x + w.b_out;
     return forward_t(out, x + _dx_dt(state) * dt);
   }
 
   forward_t time_reverse(const backward_t& state) const {
     const auto&[env, x] = state;
-    const typename info::out_vec_t out = w.m_out * x + w.b_out;
+    const typename info::out_vec_t out = w.m_through * env+  w.m_out * x + w.b_out;
     return forward_t(out, x - _dx_dt(state) * dt);
   }
 
@@ -90,6 +110,7 @@ struct model{
 
     grad.m_out += env_grad * x.transpose() * dt;
     grad.b_out += env_grad * dt;
+    grad.m_through += env_grad * env.transpose();
     grad.m_in += x_grad * env.transpose() * dt;
     grad.b_in += x_grad * dt;
     grad.m_latent += x_grad * x.transpose() * dt;
@@ -97,8 +118,8 @@ struct model{
     const typename info::latent_vec_t left =  (w.m_latent_1 * x);
     const typename info::latent_vec_t right = (w.m_latent_2 * x);
 
-    grad.m_latent_1 += right.cwiseProduct(x_grad) * x.transpose();
-    grad.m_latent_2 +=  left.cwiseProduct(x_grad) * x.transpose();
+    grad.m_latent_1 += right.cwiseProduct(x_grad) * x.transpose() * dt;
+    grad.m_latent_2 +=  left.cwiseProduct(x_grad) * x.transpose() * dt;
 
     const typename info::latent_mat_t hadamard_jacobian =
       (left.template replicate<1, info::latent_dim>()).cwiseProduct(w.m_latent_2) + 
@@ -114,7 +135,6 @@ struct model{
       (x_grad.transpose() * w.m_in).transpose() * dt;
 
     return backward_t(in_grad_next, x_grad_next);
-
   }
 
   void clear_grad(){
@@ -139,14 +159,10 @@ struct model{
 };
 
 template<typename I>
-std::ostream& operator<<(std::ostream& os, weights<I>& w){
-  os << "m_output:\n" << w.m_out << "\n\n";
-  os << "b_output:\n" << w.b_out << "\n\n";
-  os << "m_input:\n" << w.m_in << "\n\n";
-  os << "b_input:\n" << w.b_in << "\n\n";
-  os << "m_latent:\n" << w.m_latent << "\n\n";
-  os << "m_latent_1:\n" << w.m_latent_1 << "\n\n";
-  os << "m_latent_2:\n" << w.m_latent_2 << "\n\n";
+std::ostream& operator<<(std::ostream& os, const weights<I>& w){
+  over_weights([&os](const std::string_view& name, const auto& weight){
+    os << name << ":\n" << weight << "\n\n";
+  }, weight_names{}, w);
   return os;
 }
 

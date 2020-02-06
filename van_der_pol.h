@@ -46,7 +46,7 @@ struct trajectory_iterator{
     }
 
     train_pair operator*() const {
-        return train_pair{X, X};
+        return train_pair{X, X + dX_dt(X, c.mu) * c.dt};
     }
 
     bool operator==(const trajectory_iterator& other){ return step == other.step; }
@@ -78,10 +78,13 @@ struct data_generator{
 
     template<typename T>
     T gradient(const T& true_, const T& pred_) const {
-        //mse gradient
         return (2.0 * (pred_ - true_)).eval() * dt();
     }
 
+    template<typename T>
+    config::real_type error(const T& true_, const T& pred_) const {
+      return ((pred_ - true_).eval()).squaredNorm();
+    }
 
     trajectory get_trajectory(){
         const auto x = distribution(generator);

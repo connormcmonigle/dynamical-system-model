@@ -3,6 +3,9 @@
 #include <iostream>
 #include <utility>
 #include <string_view>
+#include <string>
+#include <sstream>
+#include <cassert>
 
 #include "util.h"
 
@@ -161,16 +164,39 @@ struct model{
 template<typename I>
 std::ostream& operator<<(std::ostream& os, const weights<I>& w){
   over_weights([&os](const std::string_view& name, const auto& weight){
-    os << name << ":\n" << weight << "\n\n";
+    os << name << '\n' << weight << "\n\n";
   }, weight_names{}, w);
   return os;
 }
 
 template<typename I>
+std::istream& operator>>(std::istream& is, weights<I>& w){
+  auto load_weight = [&is](const std::string_view& name, auto& weight){
+    std::string line{}; std::getline(is, line);
+    std::cout << "loading: " << line << ", " << name << std::endl;
+    assert((line == name));
+    for(size_t row{0}; std::getline(is, line) && row < weight.rows(); ++row){
+      std::istringstream ss(line);
+      std::string val{};
+      for(size_t col{0}; col < weight.cols(); ++col){
+        ss >> weight(row, col);
+      }
+    }
+  };
+  over_weights(load_weight, weight_names{}, w);
+  return is;
+}
+
+template<typename I>
 std::ostream& operator<<(std::ostream& os, model<I>& model){
-  os << "model.w:\n" << model.w << "\n\n";
-  os << "model.grad:\n" << model.grad << "\n\n";
+  os << model.w;
   return os;
+}
+
+template<typename I>
+std::istream& operator>>(std::istream& is, model<I>& model){
+  is >> model.w;
+  return is;
 }
 
 }

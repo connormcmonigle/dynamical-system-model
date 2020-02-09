@@ -1,4 +1,7 @@
 Eigen/
+check_pt/
+inference
+tl
 fdt
 tt
 main

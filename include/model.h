@@ -175,10 +175,10 @@ std::istream& operator>>(std::istream& is, weights<I>& w){
     std::string line{}; std::getline(is, line);
     std::cout << "loading: " << line << ", " << name << std::endl;
     assert((line == name));
-    for(size_t row{0}; std::getline(is, line) && row < weight.rows(); ++row){
+    for(Eigen::Index row{0}; std::getline(is, line) && row < weight.rows(); ++row){
       std::istringstream ss(line);
       std::string val{};
-      for(size_t col{0}; col < weight.cols(); ++col){
+      for(Eigen::Index col{0}; col < weight.cols(); ++col){
         ss >> weight(row, col);
       }
     }

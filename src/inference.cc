@@ -6,7 +6,8 @@
 
 
 int main(){
-    std::fstream load_file("check_pt/model_save_3966000.txt");
+    std::string file_name; std::cout << "file_name :: "; std::cin >> file_name;
+    std::fstream load_file(file_name);
     using M = dyn::model<util::info<double, 2, 2, 6>>;
     M m{0.01}; load_file >> m;
     std::cout << m << std::endl;

@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.13)
 project(dynamo)
 
 set (CMAKE_CXX_STANDARD 17)
-set (CMAKE_CXX_FLAGS "-O3 -Wall")
+set (CMAKE_CXX_FLAGS "-O3")
 include_directories (include)
-
+include_directories (include/eigen)
 
 add_executable (test_train src/test_train.cc)
 add_executable (inference src/inference.cc)

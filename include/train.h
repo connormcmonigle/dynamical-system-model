@@ -21,6 +21,8 @@ struct trainer{
   typename info::real_type learning_rate{0.0};
   M model;
   D data;
+  size_t epoch_size;
+  size_t update_count{0ull};
 
   std::vector<sample<info>> history{};
 
@@ -32,6 +34,11 @@ struct trainer{
   }
 
   typename info::real_type update_model(){
+    if(update_count % epoch_size == 0){
+      data.grow_domain();
+      std::cout << std::endl << data.distribution.min() << ", " << data.distribution.max() << std::endl;
+    }
+    ++update_count;
     typename info::latent_vec_t latent; latent.setZero();
     auto trajectory = data.get_trajectory();
     typename info::real_type t{0.0};
@@ -61,7 +68,7 @@ struct trainer{
     return err;
   }
 
-  trainer(M m, D d) : model(m), data(d) {
+  trainer(M m, D d, size_t epoch=5000) : model(m), data(d), epoch_size{epoch} {
     static_assert(info::output_dim == D::output_dim);
     static_assert(info::input_dim == D::input_dim);
     model.set_dt(data.dt());

@@ -72,7 +72,16 @@ struct data_generator{
     config c;
 
     std::mt19937 generator{std::random_device()()};
-    std::uniform_real_distribution<config::real_type> distribution{-5.0, 5.0};
+    std::uniform_real_distribution<config::real_type> distribution{-0.01, 0.01};
+
+    void grow_domain(){
+        constexpr config::real_type growth_factor = 1.5;
+        if(distribution.max() < 4.0){
+            const config::real_type min = distribution.min() * growth_factor;
+            const config::real_type max = distribution.max() * growth_factor;
+            distribution = decltype(distribution)(min, max);
+        }
+    }
 
     config::real_type dt() const { return c.dt; }
 

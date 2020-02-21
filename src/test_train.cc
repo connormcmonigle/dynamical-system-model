@@ -7,7 +7,7 @@
 int main(){
     auto data = van_der_pol::data_generator(van_der_pol::config{1.0, 0.01, 5000ull});
     auto model = dyn::model<util::info<double, 2, 2, 6>>::random(0.0);
-    auto trainer = train::trainer(model, data).set_lr(0.001);
+    auto trainer = train::trainer(model, data).set_lr(0.01);
     constexpr int sample_rate = 100;
     constexpr int save_rate = 6000;
     double sum{0.0};

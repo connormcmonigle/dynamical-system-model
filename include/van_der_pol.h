@@ -1,7 +1,7 @@
 #include <iostream>
 #include <random>
 
-#include "Eigen/Dense"
+#include <Eigen/Dense>
 
 namespace van_der_pol{
 
@@ -13,7 +13,7 @@ struct config{
     static constexpr int output_dim = 2;
     real_type mu{0.0};
     real_type dt{0.001};
-    size_t steps{1000ull};
+    size_t steps{1000};
 };
 
 template<typename T>
@@ -30,7 +30,7 @@ struct train_pair{
 
 struct trajectory_iterator{
     config c;
-    size_t step{0ull};
+    size_t step{0};
     Matrix<config::real_type, config::output_dim, 1> X;
 
     trajectory_iterator& operator++(){

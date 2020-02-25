@@ -22,7 +22,7 @@ struct trainer{
   M model;
   D data;
   size_t epoch_size;
-  size_t update_count{0ull};
+  size_t update_count{0};
 
   std::vector<sample<info>> history{};
 

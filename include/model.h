@@ -7,7 +7,7 @@
 #include <sstream>
 #include <cassert>
 
-#include "util.h"
+#include <util.h>
 
 namespace dyn{
 

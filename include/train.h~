@@ -58,8 +58,8 @@ struct trainer{
       //std::cout << iter -> gradient << std::endl;
       const auto grad_info = typename M::forward_t(iter -> gradient, latent_grad);
       const auto state_info = typename M::backward_t(iter -> input, iter -> latent);
+      // ignore gradient of loss w.r.t input for now.
       const auto[_, latent_grad_next] = model.backward(state_info, grad_info);
-      (void)_; // ignore gradient of loss w.r.t input for now.
       latent_grad = latent_grad_next;
     }
     model.step_grad(learning_rate);

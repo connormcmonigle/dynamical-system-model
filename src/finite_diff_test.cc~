@@ -32,16 +32,14 @@ void test_latent_to_latent_gradient(M model){
   typename M::info::out_vec_t out_grad{}; out_grad.setZero();
 
   auto f = [input, latent, &model](const auto& x){
-    auto[_, latent_next] = model.forward(typename M::backward_t(input, x));
-    (void)_;
+    auto[output, latent_next] = model.forward(typename M::backward_t(input, x));
     return latent_next;
   };
 
-  auto[_, latent_impl] = model.backward(
+  auto[in_impl, latent_impl] = model.backward(
     typename M::backward_t(input, latent),
     typename M::forward_t(out_grad, latent_grad)
   );
-  (void)_;
 
   std::cout << "\ncorrect:\n" << 
   (latent_grad.transpose() * finite_diff_jacobian(f, latent)).transpose() <<
@@ -64,16 +62,14 @@ void test_latent_to_output_gradient(M model){
   typename M::info::out_vec_t out_grad{}; out_grad.setRandom();    
 
   auto f = [input, latent, &model](const auto& x){
-    auto[output, _] = model.forward(typename M::backward_t(input, x));
-    (void)_;
+    auto[output, latent_next] = model.forward(typename M::backward_t(input, x));
     return output;
   };
 
-  auto[_, latent_impl] = model.backward(
+  auto[in_impl, latent_impl] = model.backward(
     typename M::backward_t(input, latent),
     typename M::forward_t(out_grad, latent_grad)
   );
-  (void)_;
 
   std::cout << "\ncorrect:\n" << 
   (out_grad.transpose() * finite_diff_jacobian(f, latent)).transpose() <<
@@ -95,16 +91,14 @@ void test_input_to_latent_gradient(M model){
   
 
   auto f = [input, latent, &model](const auto& x){
-    auto[_, latent_next] = model.forward(typename M::backward_t(x, latent));
-    (void)_;
+    auto[output, latent_next] = model.forward(typename M::backward_t(x, latent));
     return latent_next;
   };
 
-  auto[in_impl, _] = model.backward(
+  auto[in_impl, latent_impl] = model.backward(
     typename M::backward_t(input, latent),
     typename M::forward_t(out_grad, latent_grad)
   );
-  (void)_;
 
   std::cout << "\ncorrect:\n" << 
   (latent_grad.transpose() * finite_diff_jacobian(f, input)).transpose() <<

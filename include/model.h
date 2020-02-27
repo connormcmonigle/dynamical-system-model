@@ -188,7 +188,7 @@ std::istream& operator>>(std::istream& is, weights<I>& w){
 }
 
 template<typename I>
-std::ostream& operator<<(std::ostream& os, model<I>& model){
+std::ostream& operator<<(std::ostream& os, const model<I>& model){
   os << model.w;
   return os;
 }

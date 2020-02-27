@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include <cassert>
-
+#include <algorithm>
 #include <Eigen/Dense>
 
 #include <util.h>
@@ -83,8 +83,98 @@ std::ostream& operator<<(std::ostream& os, const wang_program& wp){
   return os;
 }
 
+template<int tape_size, int instruction_count>
+struct get_info{
+  using type = util::info<double, 1, 1, 6 * tape_size + 2 * instruction_count>;
+};
+
+template<int tape_size, int instruction_count>
+auto latent_init(){
+  //instruction-head, tape-head, tape, tape-head&tape, tape-head-left, tape-head-right, tape-head-copy
+  typename get_info<tape_size, instruction_count>::type::latent_vec_t result{};
+  result.setZero();
+  //init instruction-head
+  result(0) = 1.0;
+  //init tape-head
+  result(2 * instruction_count + tape_size / 2) = 1.0;
+  return result;
+}
+
+template<int tape_size, int instruction_count>
+dyn::model<typename get_info<tape_size, instruction_count>::type> compile_model(const wang_program& program){
+  assert(instruction_count == program.instructions.size());
+  dyn::model<typename get_info<tape_size, instruction_count>::type> result{1.0};
+  result.w.m_latent.setIdentity(); result.w.m_latent *= -1.0;
+  for(int i(0); i < static_cast<int>(program.instructions.size()); ++i){
+    if(comm::left == program.instructions[i].command){
+      result.w.m_latent_1(2*i+1, std::min(2*i+2, 2*instruction_count)) = 1.0;
+      result.w.m_latent_2(2*i+1, std::min(2*i+2, 2*instruction_count)) = 1.0;
+      for(int j(2*instruction_count + 3*tape_size); j < 2*instruction_count + 4*tape_size; ++j){
+        result.w.m_latent_1(2*i, j) = 1.0;
+      }
+    }else if(comm::right == program.instructions[i].command){
+      result.w.m_latent_1(2*i+1, std::min(2*i+2, 2*instruction_count)) = 1.0;
+      result.w.m_latent_2(2*i+1, std::min(2*i+2, 2*instruction_count)) = 1.0;
+      for(int j(2*instruction_count + 4*tape_size); j < 2*instruction_count + 5*tape_size; ++j){
+        result.w.m_latent_1(2*i, j) = 1.0;
+      }
+    }else if(comm::star == program.instructions[i].command){
+      result.w.m_latent_1(2*i+1, std::min(2*i+2, 2*instruction_count)) = 1.0;
+      result.w.m_latent_2(2*i+1, std::min(2*i+2, 2*instruction_count)) = 1.0;
+      for(int j(2*instruction_count + 5*tape_size); j < 2*instruction_count + 6*tape_size; ++j){
+        result.w.m_latent_1(2*i, j) = 1.0;
+      }
+      for(int j(2*instruction_count); j < 2*instruction_count + tape_size; ++j){
+        result.w.m_latent_1(2*i+1, tape_size + j) = 1.0;
+        result.w.m_latent_1(2*tape_size + j, tape_size + j) = -1.0;
+        result.w.m_latent_2(5*tape_size + j, tape_size + j) = 1.0;
+      }
+    }else if(comm::c_n == program.instructions[i].command){
+      result.w.m_latent_1(2*i+1, 2*program.instructions[i].jump) = 1.0;
+      result.w.m_latent_1(2*i+1, std::min(2*i+2, 2*instruction_count)) = 1.0;
+      result.w.m_latent_2(2*i+1, std::min(2*i+2, 2*instruction_count)) = 1.0;
+      for(int j(2*instruction_count); j < 2*instruction_count + tape_size; ++j){
+        result.w.m_latent_2(j, j) = 1.0;
+        result.w.m_latent_1(2*i+1, j) = 1.0;
+      }
+      
+      for(int j(2*instruction_count); j < 2*instruction_count + tape_size; ++j){
+        result.w.m_latent_2(j + 2*tape_size, program.instructions[i].jump) = 1.0;
+        result.w.m_latent_1(j + 2*tape_size, std::min(2*i+2, 2*instruction_count)) = -1.0;
+      }
+    }
+  }
+  for(int i(0); i < static_cast<int>(instruction_count); ++i){
+    result.w.m_latent_1(2*i, 2*i+1) = 1.0;
+    result.w.m_latent_2(2*i, 2*i+1) = 1.0;
+    for(int j(2*instruction_count); j < 2*instruction_count + tape_size; ++j){
+      result.w.m_latent_1(2*i, j) = 1.0;
+      result.w.m_latent_2(j, j) = 1.0;
+    }
+  }
+  for(int i(2*instruction_count); i < 2*instruction_count + tape_size; ++i){
+    result.w.m_latent_1(i, 2*tape_size + i) = 1.0;
+    result.w.m_latent_2(i + tape_size , 2*tape_size + i) = 1.0;
+    result.w.m_latent_2(i, std::max(3*tape_size + i - 1, 3*tape_size + 2*instruction_count)) = 1.0;
+    result.w.m_latent_2(i, std::min(4*tape_size + i + 1, 5*tape_size + 2*instruction_count-1)) = 1.0;
+    result.w.m_latent_2(i, 5*tape_size + i) = 1.0;
+  }
+  
+  for(int i(2*instruction_count); i < 2*instruction_count + tape_size; ++i){
+    result.w.m_latent(i, 3*tape_size + i) = 1.0;
+    result.w.m_latent(i, 4*tape_size + i) = 1.0;
+    result.w.m_latent(i, 5*tape_size + i) = 1.0;
+    result.w.m_latent(i + tape_size, i + tape_size) = 0.0;
+  }
+  
+  
+  result.w.m_latent_1 = result.w.m_latent_1.transpose().eval();
+  result.w.m_latent_2 = result.w.m_latent_2.transpose().eval();
+  return result;
+}
+
 void execute_display(const wang_program& program, const size_t iter = 100){
-  constexpr size_t tape_size = 25;
+  constexpr size_t tape_size = 7;
   std::vector<bool> tape(tape_size, false);
   size_t head_pos = tape_size / 2;
   size_t comm_idx = 0;
@@ -128,5 +218,26 @@ int main(){
   std::cout << "loaded: " << std::endl;
   std::cout << wp << std::endl;
   std::cout << std::endl << std::endl << std::endl;
-  execute_display(wp);
+  
+  constexpr int tape_size = 11;
+  constexpr int instruction_count = 4;
+  
+  const auto compiled = compile_model<tape_size, instruction_count>(wp);
+  std::cout << std::endl << std::endl;
+  std::cout << compiled << std::endl;
+  std::cout << std::endl << std::endl;
+  
+  auto latent = latent_init<tape_size, instruction_count>();
+  std::cout << "latent_init: " << std::endl;
+  std::cout << latent.transpose() << std::endl << std::endl;
+  std::cout << "======================================================================================================" << std::endl;
+  typename get_info<tape_size, instruction_count>::type::in_vec_t input{}; input.setZero(); 
+  
+  for(size_t i(0); i < 100; ++i){
+    const auto [next_input, next_latent] = compiled.forward(decltype(compiled)::backward_t(input, latent));
+    input = next_input;
+    latent = next_latent;
+    std::cout << i << ':' << std::endl;
+    std::cout << latent.transpose() << std::endl;
+  }
 }

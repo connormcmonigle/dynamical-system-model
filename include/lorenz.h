@@ -3,22 +3,28 @@
 
 #include <Eigen/Dense>
 
-namespace van_der_pol{
+namespace lorenz{
 
 namespace { using namespace Eigen; }
 
 struct config{
   using real_type = double;
-  static constexpr int dim = 2;
+  static constexpr int dim = 3;
 
-  real_type mu{0.5};
+  real_type sigma{10.0};
+  real_type rho{28.0};
+  real_type beta{8.0/3.0};
+
   real_type dt{0.001};
-  size_t steps{1000};
+  size_t steps{200};
 
   template<typename T>
   T f(const T& X) const {
     T result{};
-    result << X(1), (mu * (1.0 - X(0)*X(0)) * X(1) - X(0));
+    result <<
+      sigma * (X(1) - X(0)),
+      X(0) * (rho - X(2)) - X(1),
+      X(0) * X(1) - beta * X(2);
     return result;
   }
 };

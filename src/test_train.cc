@@ -1,12 +1,14 @@
 #include <iostream>
 #include <fstream>
+#include <ode_data_generator.h>
 #include <van_der_pol.h>
+#include <lorenz.h>
 #include <model.h>
 #include <train.h>
 
 int main(){
     auto data = ode::data_generator(van_der_pol::config{1.5, 0.01, 5000ull});
-    auto model = dyn::model<util::info<double, 2, 2, 6>>::random(0.0);
+    auto model = dyn::model<util::info<double, decltype(data)::input_dim, decltype(data)::output_dim, 6>>::random(0.0);
     auto trainer = train::trainer(model, data).set_lr(0.01);
     constexpr int sample_rate = 100;
     constexpr int save_rate = 6000;
